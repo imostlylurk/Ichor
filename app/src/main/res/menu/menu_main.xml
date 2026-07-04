@@ -1,0 +1,31 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="dev.ichor.callscreen.MainActivity">
+
+    <item
+        android:id="@+id/mnuBuildDatabaseFull"
+        android:title="@string/lblBuildDatabaseFull" />
+
+    <item
+        android:id="@+id/mnuBuildDatabaseHighconf"
+        android:title="@string/lblBuildDatabaseHighConf" />
+
+    <item
+        android:id="@+id/mnuBuildDatabaseArchive"
+        android:title="@string/lblBuildDatabaseArchive" />
+
+    <item
+        android:id="@+id/mnuDeleteDatabase"
+        android:title="@string/lblDeleteDatabase" />
+
+    <item
+        android:id="@+id/toggleSilenceUnknown"
+        android:title="@string/lblSilenceUnknownToggle"
+        android:checkable="true" />
+
+    <item
+        android:id="@+id/toggleBlockUnknown"
+        android:title="@string/lblBlockUnknownToggle"
+        android:checkable="true" />
+
+</menu>

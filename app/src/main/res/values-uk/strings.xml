@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lblSilencedCall">Дзвінок заглушено</string>
+    <string name="lblDisallowedCall">Дзвінок заблоковано</string>
+    <string name="lblAllowedCall">Дзвінок дозволено</string>
+    <string name="lblStatusVerifyFailed">🔴 Не вдалося перевірити 🔴</string>
+    <string name="lblStatusVerifySuccess">🟢 Перевірка пройшла успішно 🟢</string>
+    <string name="lblStatusVerifyUnknown">🟡 Стан перевірки невідомий 🟡</string>
+    <string name="lblStatusExcluded">Виключено з перевірки</string>
+    <string name="lblDeleteDatabase">Видалити базу даних</string>
+    <string name="lblStatusMatchedDatabase">🔴 Номер у базі даних 🔴</string>
+    <string name="lblDownloadDatabaseFull">Завантажити всі повідомлені номери</string>
+    <string name="lblDownloadDatabaseHighConf">Завантажити номери з високим рівнем довіри</string>
+    <string name="lblDatabaseServer">Перевизначення сервера бази даних</string>
+    <string name="lblOverride">Перевизначити</string>
+    <string name="main_database_override">Використовується сервер %s</string>
+    <string name="lblResetPrimary">Основні сервери</string>
+    <string name="lblResetCloudflare">Дзеркало Cloudflare</string>
+    <string name="app_name">Ichor</string>
+    <string name="lblNotificationAlertTitle">Повідомлення про перевірку дзвінків</string>
+    <string name="lblNotificationAlertDescription">Використовується для інформування користувача про стан відфільтрованих дзвінків</string>
+    <string name="lblSilenceUnknownToggle">Перевірка заглушення без підпису</string>
+    <string name="lblBlockUnknownToggle">Перевірка блокування без підпису</string>
+</resources>

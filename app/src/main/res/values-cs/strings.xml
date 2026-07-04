@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ichor</string>
+    <string name="lblNotificationAlertTitle">Upozornění na kontrolu hovorů</string>
+    <string name="lblNotificationAlertDescription">Používáno k informování uživatele o stavu kontrolovaných hovorů</string>
+    <string name="lblSilencedCall">Ztlumený hovor</string>
+    <string name="lblStatusVerifyUnknown">🟡 Ověření je neznámé 🟡</string>
+    <string name="lblStatusExcluded">Vyloučeno z kontrol</string>
+    <string name="lblDeleteDatabase">Smazat databázi</string>
+    <string name="lblStatusMatchedDatabase">🔴 Číslo v databázi 🔴</string>
+    <string name="lblDownloadDatabaseFull">Stáhnout všechna nahlášená čísla</string>
+    <string name="lblDownloadDatabaseHighConf">Stáhnout čísla s vysokou spolehlivostí</string>
+    <string name="lblSilenceUnknownToggle">Ztlumit nepodepsané</string>
+    <string name="lblBlockUnknownToggle">Zablokovat nepodepsané</string>
+    <string name="lblDatabaseServer">Přepsání databázového serveru</string>
+    <string name="lblOverride">Přepsat</string>
+    <string name="lblResetPrimary">Primární servery</string>
+    <string name="lblResetCloudflare">Zrcadlo Cloudflare</string>
+    <string name="main_database_override">Použitý server: %s</string>
+    <string name="lblAllowedCall">Povolený hovor</string>
+    <string name="lblStatusVerifySuccess">🟢 Ověření bylo úspěšné 🟢</string>
+    <string name="lblDisallowedCall">Zakázaný hovor</string>
+    <string name="lblStatusVerifyFailed">🔴 Ověření selhalo 🔴</string>
+</resources>

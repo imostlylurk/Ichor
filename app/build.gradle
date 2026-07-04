@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'dev.ichor.callscreen'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "dev.ichor.callscreen"
+        minSdk 30
+        targetSdk 34
+        versionCode 124
+        versionName "1.24"
+        resConfigs 'en', 'pt', 'es', 'de', 'et', 'gl', 'hr', 'in', 'nb-rNO', 'pt-rBR', 'uk', 'zh-rCN', 'fr', 'ro', 'ar', 'cs', 'zh-rTW'
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            minifyEnabled true
+            zipAlignEnabled true
+        }
+        release {
+            shrinkResources true
+            minifyEnabled true
+            zipAlignEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+
+}

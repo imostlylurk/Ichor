@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lblNotificationAlertTitle">Alerta de exame da chamadas</string>
+    <string name="lblSilencedCall">Silenciar chamada</string>
+    <string name="lblDisallowedCall">Chamada non permitida</string>
+    <string name="lblStatusVerifyFailed">🔴 Fallou a verificación 🔴</string>
+    <string name="lblStatusVerifyUnknown">🟡 Verificación descoñecida 🟡</string>
+    <string name="lblBlockUnknownToggle">Bloquear se a verificación non está asinada</string>
+    <string name="lblDatabaseServer">Sobreescribir servidor BDD</string>
+    <string name="lblResetCloudflare">Espello en Cloudflare</string>
+    <string name="main_database_override">A usar o servidor %s</string>
+    <string name="app_name">Ichor</string>
+    <string name="lblNotificationAlertDescription">Utilizada para informar á usuaria do estado do exame das chamadas</string>
+    <string name="lblAllowedCall">Chamada permitida</string>
+    <string name="lblStatusVerifySuccess">🟢 Superou a verificación 🟢</string>
+    <string name="lblStatusExcluded">Excluída do exame</string>
+    <string name="lblDownloadDatabaseFull">Descargar todos os números denunciados</string>
+    <string name="lblDeleteDatabase">Eliminar base de datos</string>
+    <string name="lblDownloadDatabaseHighConf">Descargar números de confianza alta</string>
+    <string name="lblStatusMatchedDatabase">🔴 Número na base de datos 🔴</string>
+    <string name="lblSilenceUnknownToggle">Silenciar se a verificación non está asinada</string>
+    <string name="lblOverride">Sobreescribir</string>
+    <string name="lblResetPrimary">Servidores Principais</string>
+</resources>

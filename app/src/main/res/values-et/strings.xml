@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lblStatusVerifyFailed">🔴 Tuvastamine ei õnnestunud 🔴</string>
+    <string name="lblStatusVerifySuccess">🟢 Tuvastamine õnnestus 🟢</string>
+    <string name="lblStatusVerifyUnknown">🟡 Tuvastamise olek on teadmata 🟡</string>
+    <string name="lblStatusExcluded">Ei kuulu kontrollimisele</string>
+    <string name="lblDeleteDatabase">Kustuta andmebaas</string>
+    <string name="lblStatusMatchedDatabase">🔴 Number on andmebaasis 🔴</string>
+    <string name="main_database_override">Kasutame serverit %s</string>
+    <string name="lblResetCloudflare">Cloudflare peegelserver</string>
+    <string name="lblDisallowedCall">Keelatud kõne</string>
+    <string name="lblSilencedCall">Vaigistatud kõne</string>
+    <string name="app_name">Ichor</string>
+    <string name="lblAllowedCall">Lubatud kõne</string>
+    <string name="lblNotificationAlertTitle">Kõnede taustakontrolli teated</string>
+    <string name="lblNotificationAlertDescription">Teavitus kõnede taustakontrolli kohta</string>
+    <string name="lblDownloadDatabaseFull">Laadi alla kõik numbrid, millest on teada antud</string>
+    <string name="lblResetPrimary">Põhiserverid</string>
+    <string name="lblDownloadDatabaseHighConf">Laadi alla suure tõenäosusega numbrite andmekogu</string>
+    <string name="lblSilenceUnknownToggle">Vaikuse verifitseerimine on allkirjastamata</string>
+    <string name="lblBlockUnknownToggle">Blokeerimise verifitseerimine on allkirjastamata</string>
+    <string name="lblDatabaseServer">Kasuta muud andmekogu</string>
+    <string name="lblOverride">Asenda server</string>
+</resources>

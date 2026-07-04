@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lblStatusVerifySuccess">🟢 Verificado com sucesso 🟢</string>
+    <string name="lblDownloadDatabaseFull">Baixar todos os números reportados</string>
+    <string name="lblDeleteDatabase">Excluir banco de dados</string>
+    <string name="lblAllowedCall">Chamada permitida</string>
+    <string name="lblNotificationAlertTitle">Alertas da filtragem de chamadas</string>
+    <string name="lblNotificationAlertDescription">Usado para informar o usuário do estado das chamadas filtradas</string>
+    <string name="app_name">Ichor</string>
+    <string name="lblDisallowedCall">Chamada não permitida</string>
+    <string name="lblStatusVerifyFailed">🔴 Verificação falhou 🔴</string>
+    <string name="lblSilenceUnknownToggle">Silenciar chamadas sem verificação</string>
+    <string name="lblDatabaseServer">Alterar o servidor do banco de dados</string>
+    <string name="lblResetPrimary">Servidores Primários</string>
+    <string name="lblResetCloudflare">Espelho Cloudflare</string>
+    <string name="lblSilencedCall">Chamada silenciada</string>
+    <string name="lblStatusExcluded">Excluído da filtragem</string>
+    <string name="lblStatusVerifyUnknown">🟡 Verificação indefinida 🟡</string>
+    <string name="lblStatusMatchedDatabase">🔴 Número no banco de dados 🔴</string>
+    <string name="lblDownloadDatabaseHighConf">Baixar números com alta confiança de serem maliciosos</string>
+    <string name="lblBlockUnknownToggle">Bloquear chamadas sem verificação</string>
+    <string name="lblOverride">Alterar</string>
+    <string name="main_database_override">Usando servidor %s</string>
+</resources>
