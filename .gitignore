@@ -13,3 +13,7 @@
 *.iml
 /local.properties
 local.properties
+
+# Editor swap files
+.*.swp
+.*.swo

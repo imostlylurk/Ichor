@@ -2,6 +2,7 @@ Ichor
 ==========
 
 Automatically declines all calls failing STIR/SHAKEN verification, with on-device spam filter generation from FTC complaint data.
+Ichor is a continuation of Carrion from Divested Computing, and filters out calls that don't pass the "sniff test" of your configured sensitivity.
 
 What?
 -----
@@ -24,10 +25,10 @@ Database Usage
 --------------
 - For extra coverage and to enable functionality on devices without STIR/SHAKEN there is a local database lookup feature
 - Calls from numbers matched in the database will not be declined, but will be silenced
-- **Building the database on-device**: The app downloads the raw FTC Do Not Call complaint data directly and builds the database itself — no pre-built file or external server needed
-  - **Maximum** — every number reported in the recent daily files; broadest coverage, may include some false positives
-  - **Balanced (recommended)** — numbers reported 2+ times recently; good coverage with fewer false positives
-  - **Strict** — numbers reported 10+ times across all accumulated data; very low false positive rate, may miss newer spam numbers
+- **Building the database on-device**: The app downloads the raw FTC Do Not Call complaint data directly and builds the database itself - no prebuilt file or external server dependency (Aside from the FTC)
+  - **Maximum** - every number reported in the recent daily files; broadest coverage, may include some false positives
+  - **Balanced (recommended)** - numbers reported 2+ times recently; good coverage with fewer false positives
+  - **Strict** - numbers reported 10+ times across all accumulated data; very low false positive rate, may miss newer spam numbers
   - Each build downloads any new daily files from the FTC and caches them locally, so successive builds accumulate history for richer Balanced and Strict tiers
 - The database function can be disabled via the `delete database` button
 - There is more information about the database here: https://www.ftc.gov/policy-notices/open-government/data-sets/do-not-call-data
