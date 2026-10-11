@@ -1,7 +1,4 @@
 /*
-Copyright (c) 2024 Divested Computing Group
-Copyright (c) 2026 Ichor contributors
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -34,21 +31,21 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Downloads FTC Do Not Call daily complaint data files directly and builds
- * the spam-number database on-device — no external/pre-built server file needed.
+ * Downloads FTC Do Not Call daily complaint data files directly and builds the spam-number database on-device.
+ * Carrion depended on the files being hosted at the Divested website, Ichor is freestanding
  *
  * The FTC publishes one CSV per business day at:
  *   https://www.ftc.gov/sites/default/files/DNC_Complaint_Numbers_YYYY-MM-DD.csv
  * The listing page (do-not-call-data) links the ~25 most recent files.
  * Each CSV's first column ("Company_Phone_Number") is a 10-digit number.
  *
- * Filter tiers (each is a subset of the one above — more selective = fewer
+ * Filter tiers (each is a subset of the one above - more selective = fewer
  * numbers = fewer false positives):
  *   - Full:       every number seen at least once in the last ~30 files
  *   - HighConf:   numbers reported 2+ times in the last ~90 files
  *   - Archive:    numbers reported 10+ times across all accumulated files
  *
- * Build results are accumulated across runs: the app caches every CSV it has
+ * Build results are accumulated across runs: the app caches every csv it has
  * ever fetched, so each build gets progressively richer without needing to
  * re-download. The HighConf and Archive tiers benefit most from this history.
  */
@@ -89,8 +86,7 @@ public class DatabaseBuilder {
     }
 
     /**
-     * Fetch the FTC listing page, return the discovered CSV URLs keyed by
-     * a sortable date string. Natural order = ascending date.
+     * Fetch the FTC listing page, return the discovered CSV URLs keyed by a date string. Natural order = ascending date.
      * Returns an empty map on failure.
      */
     private TreeMap<String, String> discoverCsvLinks() {
@@ -175,49 +171,71 @@ public class DatabaseBuilder {
     }
 
     /**
-     * Build the database from cached FTC CSVs.
+     * Build the database from cached FTC csvs.
      * @param tier "full", "highconf", or "archive"
      */
     public void build(final String tier) {
         new Thread(() -> {
             log("Building '" + tier + "' database from FTC data...\n");
 
-            // 1. Discover available CSVs
             TreeMap<String, String> discovered = discoverCsvLinks();
             if (discovered.isEmpty()) {
-                log("No FTC data files found online. Check your connection.\n");
-                return;
+                log("No FTC data files found online.\n");
+                log("If your connection works, the FTC may be rate-limiting this");
+                log(" network (its block masquerades as HTTP 404 on all ftc.gov");
+                log(" pages). Wait a few hours or try another network.\n");
+                File[] cached = cacheDir.listFiles((dir, name) ->
+                        name.startsWith("DNC_Complaint_Numbers_") && name.endsWith(".csv"));
+                if (cached == null || cached.length == 0) {
+                    return;
+                }
+                log("Building from " + cached.length + " cached file(s) only.\n");
+            } else {
+                log("FTC has " + discovered.size() + " recent daily files listed.\n");
             }
-            log("FTC has " + discovered.size() + " recent daily files listed.\n");
 
-            // 2. Download any we don't have yet
             int downloaded = 0;
             int alreadyCached = 0;
+            int consecutiveFailures = 0;
             for (Map.Entry<String, String> entry : discovered.entrySet()) {
                 boolean wasCached = new File(cacheDir, entry.getKey() + ".csv").exists();
+                if (!wasCached && downloaded > 0) {
+                    try {
+                        Thread.sleep(1500); // pace requests; burst-fetching trips the FTC WAF
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
                 File cached = downloadCsvIfMissing(entry.getKey(), entry.getValue());
                 if (cached != null) {
+                    consecutiveFailures = 0;
                     if (wasCached) {
                         alreadyCached++;
                     } else {
                         downloaded++;
                     }
+                } else if (!wasCached) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= 3) {
+                        log("Repeated download failures, aborting batch. The FTC");
+                        log(" is likely blocking this network. Try again later.\n");
+                        break;
+                    }
                 }
             }
             log("Downloaded " + downloaded + " new file(s), " + alreadyCached + " already cached.\n");
 
-            // 3. Enumerate ALL cached CSVs (including from previous builds)
             File[] allCached = cacheDir.listFiles((dir, name) ->
                     name.startsWith("DNC_Complaint_Numbers_") && name.endsWith(".csv"));
             if (allCached == null || allCached.length == 0) {
                 log("No CSV data available to build from.\n");
                 return;
             }
-            // Sort descending by filename (newest date first)
+
             java.util.Arrays.sort(allCached, (a, b) -> b.getName().compareTo(a.getName()));
             log("Building from " + allCached.length + " total cached file(s).\n");
 
-            // 4. Parse CSVs and count occurrences per number
             HashSet<String> allNumbersRecent30 = new HashSet<>();      // for "full" tier
             TreeMap<String, Integer> countsRecent90 = new TreeMap<>(); // for "highconf" tier
             TreeMap<String, Integer> countsAll = new TreeMap<>();      // for "archive" tier
@@ -253,7 +271,6 @@ public class DatabaseBuilder {
                 fileIndex++;
             }
 
-            // 5. Assemble the tier
             HashSet<String> result = new HashSet<>();
             switch (tier) {
                 case "archive":
@@ -283,7 +300,6 @@ public class DatabaseBuilder {
                 return;
             }
 
-            // 6. Write gzipped database (sorted, one number per line)
             File outFile = new File(databaseFile + ".new");
             if (outFile.exists()) outFile.delete();
             try {
@@ -313,7 +329,6 @@ public class DatabaseBuilder {
         }).start();
     }
 
-    /** Extract the first comma-separated field, handling quotes. */
     private static String extractFirstField(String line) {
         if (line == null || line.isEmpty()) return null;
         line = line.replace("\r", "");
