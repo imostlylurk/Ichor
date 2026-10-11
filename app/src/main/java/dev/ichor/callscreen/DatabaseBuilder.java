@@ -18,16 +18,23 @@ import android.content.Context;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -57,29 +64,174 @@ public class DatabaseBuilder {
     private static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
 
     /**
-     * The FTC WAF fingerprints request headers: a bare User-Agent gets a fake
-     * HTTP 404 on every ftc.gov URL, while a complete browser header set is
-     * served normally. Send the full set on every request.
+     * The FTC WAF fingerprints request headers AND HttpURLConnection silently
+     * drops Sec-Fetch-* headers (they are restricted), so a browser-like UA
+     * sent through HttpURLConnection can never look like a real browser and
+     * gets a fake HTTP 404 on every ftc.gov URL. Speaking raw HTTP/1.1 over an
+     * SSLSocket lets us send the complete browser header set verbatim.
+     *
+     * Handles hostname verification, redirects (<=3), chunked transfer
+     * encoding, and gzip content encoding. Returns the decoded body bytes.
      */
-    private static void applyBrowserHeaders(HttpURLConnection connection) {
-        connection.addRequestProperty("User-Agent", USER_AGENT);
-        connection.addRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5");
-        connection.addRequestProperty("Accept-Encoding", "gzip");
-        connection.addRequestProperty("Upgrade-Insecure-Requests", "1");
-        connection.addRequestProperty("Sec-Fetch-Dest", "document");
-        connection.addRequestProperty("Sec-Fetch-Mode", "navigate");
-        connection.addRequestProperty("Sec-Fetch-Site", "none");
-        connection.addRequestProperty("Sec-Fetch-User", "?1");
+    private static byte[] httpsGet(String urlStr) throws Exception {
+        String current = urlStr;
+        for (int hop = 0; hop < 4; hop++) {
+            URL u = new URL(current);
+            String host = u.getHost();
+            int port = u.getPort() != -1 ? u.getPort() : 443;
+            String path = u.getPath() + (u.getQuery() != null ? "?" + u.getQuery() : "");
+
+            javax.net.ssl.SSLSocketFactory factory = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
+            javax.net.ssl.SSLSocket socket = (javax.net.ssl.SSLSocket) factory.createSocket();
+            javax.net.ssl.SSLParameters params = socket.getSSLParameters();
+            params.setEndpointIdentificationAlgorithm("HTTPS"); // hostname verification
+            socket.setSSLParameters(params);
+            socket.connect(new InetSocketAddress(host, port), 30000);
+            socket.setSoTimeout(30000);
+
+            String request = "GET " + path + " HTTP/1.1\r\n"
+                    + "Host: " + host + "\r\n"
+                    + "User-Agent: " + USER_AGENT + "\r\n"
+                    + "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\n"
+                    + "Accept-Language: en-US,en;q=0.5\r\n"
+                    + "Accept-Encoding: gzip\r\n"
+                    + "Upgrade-Insecure-Requests: 1\r\n"
+                    + "Sec-Fetch-Dest: document\r\n"
+                    + "Sec-Fetch-Mode: navigate\r\n"
+                    + "Sec-Fetch-Site: none\r\n"
+                    + "Sec-Fetch-User: ?1\r\n"
+                    + "Connection: close\r\n"
+                    + "\r\n";
+            OutputStream os = socket.getOutputStream();
+            os.write(request.getBytes(StandardCharsets.UTF_8));
+            os.flush();
+
+            ByteArrayOutputStream raw = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            try {
+                int n;
+                while ((n = socket.getInputStream().read(buf)) != -1) {
+                    raw.write(buf, 0, n);
+                }
+            } catch (SocketTimeoutException ste) {
+                // use whatever arrived before the read timeout
+            }
+            socket.close();
+            byte[] resp = raw.toByteArray();
+
+            int headerEnd = indexOf(resp, "\r\n\r\n");
+            if (headerEnd < 0) {
+                throw new java.io.IOException("malformed HTTP response");
+            }
+            String headerBlock = new String(resp, 0, headerEnd, StandardCharsets.ISO_8859_1);
+            String statusLine = headerBlock.split("\r\n")[0];
+            int code = Integer.parseInt(statusLine.split(" ")[1]);
+            String headersLower = headerBlock.toLowerCase();
+
+            if (code >= 300 && code < 400) {
+                String location = null;
+                for (String h : headerBlock.split("\r\n")) {
+                    if (h.toLowerCase().startsWith("location:")) {
+                        location = h.substring("location:".length()).trim();
+                        break;
+                    }
+                }
+                if (location != null) {
+                    current = new URL(new URL(current), location).toString();
+                    continue;
+                }
+            }
+            if (code != 200) {
+                throw new java.io.IOException("HTTP " + code);
+            }
+
+            InputStream body = new ByteArrayInputStream(resp, headerEnd + 4, resp.length - headerEnd - 4);
+            if (headersLower.contains("transfer-encoding:") && headersLower.contains("chunked")) {
+                body = new ByteArrayInputStream(dechunk(body));
+            }
+            if (headersLower.contains("content-encoding:")) {
+                int idx = headersLower.indexOf("content-encoding:");
+                String rest = headersLower.substring(idx + "content-encoding:".length()).trim();
+                if (rest.startsWith("gzip")) {
+                    body = new GZIPInputStream(body);
+                }
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] b = new byte[8192];
+            int k;
+            while ((k = body.read(b)) != -1) {
+                out.write(b, 0, k);
+            }
+            return out.toByteArray();
+        }
+        throw new java.io.IOException("too many redirects");
     }
 
-    /** Unwrap gzip when we asked for it via Accept-Encoding. */
-    private static java.io.InputStream openStream(HttpURLConnection connection) throws Exception {
-        java.io.InputStream in = connection.getInputStream();
-        if ("gzip".equalsIgnoreCase(connection.getContentEncoding())) {
-            in = new java.util.zip.GZIPInputStream(in);
+    /** Find a byte-sequence delimiter in a byte array, -1 if absent. */
+    private static int indexOf(byte[] haystack, String needle) {
+        byte[] n = needle.getBytes(StandardCharsets.ISO_8859_1);
+        outer:
+        for (int i = 0; i <= haystack.length - n.length; i++) {
+            for (int j = 0; j < n.length; j++) {
+                if (haystack[i + j] != n[j]) {
+                    continue outer;
+                }
+            }
+            return i;
         }
-        return in;
+        return -1;
+    }
+
+    /** Decode HTTP/1.1 chunked transfer encoding. */
+    private static byte[] dechunk(InputStream in) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        while (true) {
+            String sizeLine = readLine(in);
+            if (sizeLine == null) {
+                break;
+            }
+            sizeLine = sizeLine.trim();
+            if (sizeLine.isEmpty()) {
+                continue;
+            }
+            int size;
+            try {
+                size = Integer.parseInt(sizeLine.split(";")[0].trim(), 16);
+            } catch (NumberFormatException e) {
+                break;
+            }
+            if (size == 0) {
+                break;
+            }
+            byte[] chunk = new byte[size];
+            int read = 0;
+            while (read < size) {
+                int c = in.read(chunk, read, size - read);
+                if (c < 0) {
+                    break;
+                }
+                read += c;
+            }
+            out.write(chunk, 0, read);
+            readLine(in); // consume trailing CRLF after each chunk
+        }
+        return out.toByteArray();
+    }
+
+    /** Read a CRLF-terminated line from a stream as ISO-8859-1 bytes. */
+    private static String readLine(InputStream in) throws Exception {
+        ByteArrayOutputStream line = new ByteArrayOutputStream();
+        int prev = -1;
+        int c;
+        while ((c = in.read()) != -1) {
+            if (prev == '\r' && c == '\n') {
+                byte[] b = line.toByteArray();
+                return new String(b, 0, b.length - 1, StandardCharsets.ISO_8859_1);
+            }
+            line.write(c);
+            prev = c;
+        }
+        return line.size() > 0 ? new String(line.toByteArray(), StandardCharsets.ISO_8859_1) : null;
     }
 
     private final Context context;
@@ -117,26 +269,10 @@ public class DatabaseBuilder {
      */
     private TreeMap<String, String> discoverCsvLinks() {
         TreeMap<String, String> links = new TreeMap<>();
-        HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(FTC_INDEX_URL).openConnection();
-            connection.setConnectTimeout(30000);
-            connection.setReadTimeout(30000);
-            applyBrowserHeaders(connection);
-            connection.connect();
-            if (connection.getResponseCode() != 200) {
-                log("FTC index returned HTTP " + connection.getResponseCode() + "\n");
-                return links;
-            }
-            BufferedReader reader = new BufferedReader(new InputStreamReader(openStream(connection)));
-            StringBuilder page = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                page.append(line);
-            }
-            reader.close();
+            String page = new String(httpsGet(FTC_INDEX_URL), StandardCharsets.UTF_8);
 
-            Matcher matcher = CSV_LINK_PATTERN.matcher(page.toString());
+            Matcher matcher = CSV_LINK_PATTERN.matcher(page);
             while (matcher.find()) {
                 String dateKey = sanitizeFilename(matcher.group(2)); // e.g. "DNC_Complaint_Numbers_2026-07-02"
                 String relativePath = matcher.group(1).substring("/sites/default/files/".length());
@@ -145,10 +281,6 @@ public class DatabaseBuilder {
             }
         } catch (Exception e) {
             log("Failed to fetch FTC index: " + e.getMessage() + "\n");
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
         return links;
     }
@@ -162,38 +294,20 @@ public class DatabaseBuilder {
         if (cached.exists() && cached.length() > 0) {
             return cached; // already have it
         }
-        HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setConnectTimeout(30000);
-            connection.setReadTimeout(30000);
-            applyBrowserHeaders(connection);
-            connection.connect();
-            if (connection.getResponseCode() != 200) {
+            byte[] data = httpsGet(url);
+            if (data.length == 0) {
                 return null;
             }
             File tmp = new File(cached + ".tmp");
             if (tmp.exists()) tmp.delete();
             FileOutputStream out = new FileOutputStream(tmp);
-            java.io.InputStream in = openStream(connection);
-            byte[] data = new byte[4096];
-            int count;
-            while ((count = in.read(data)) != -1) {
-                out.write(data, 0, count);
-            }
-            in.close();
+            out.write(data);
             out.close();
-            if (tmp.length() > 0) {
-                tmp.renameTo(cached);
-                return cached;
-            }
-            tmp.delete();
+            tmp.renameTo(cached);
+            return cached;
         } catch (Exception e) {
             // network blip, skip this file
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
         return null;
     }
