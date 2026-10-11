@@ -56,6 +56,32 @@ public class DatabaseBuilder {
     private static final Pattern CSV_LINK_PATTERN = Pattern.compile("href=\"(/sites/default/files/(DNC_Complaint_Numbers_[0-9-]+_?\\d*\\.csv))\"");
     private static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
 
+    /**
+     * The FTC WAF fingerprints request headers: a bare User-Agent gets a fake
+     * HTTP 404 on every ftc.gov URL, while a complete browser header set is
+     * served normally. Send the full set on every request.
+     */
+    private static void applyBrowserHeaders(HttpURLConnection connection) {
+        connection.addRequestProperty("User-Agent", USER_AGENT);
+        connection.addRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5");
+        connection.addRequestProperty("Accept-Encoding", "gzip");
+        connection.addRequestProperty("Upgrade-Insecure-Requests", "1");
+        connection.addRequestProperty("Sec-Fetch-Dest", "document");
+        connection.addRequestProperty("Sec-Fetch-Mode", "navigate");
+        connection.addRequestProperty("Sec-Fetch-Site", "none");
+        connection.addRequestProperty("Sec-Fetch-User", "?1");
+    }
+
+    /** Unwrap gzip when we asked for it via Accept-Encoding. */
+    private static java.io.InputStream openStream(HttpURLConnection connection) throws Exception {
+        java.io.InputStream in = connection.getInputStream();
+        if ("gzip".equalsIgnoreCase(connection.getContentEncoding())) {
+            in = new java.util.zip.GZIPInputStream(in);
+        }
+        return in;
+    }
+
     private final Context context;
     private final TextView logView;
     private final File cacheDir;
@@ -96,13 +122,13 @@ public class DatabaseBuilder {
             connection = (HttpURLConnection) new URL(FTC_INDEX_URL).openConnection();
             connection.setConnectTimeout(30000);
             connection.setReadTimeout(30000);
-            connection.addRequestProperty("User-Agent", USER_AGENT);
+            applyBrowserHeaders(connection);
             connection.connect();
             if (connection.getResponseCode() != 200) {
                 log("FTC index returned HTTP " + connection.getResponseCode() + "\n");
                 return links;
             }
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(openStream(connection)));
             StringBuilder page = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -141,7 +167,7 @@ public class DatabaseBuilder {
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setConnectTimeout(30000);
             connection.setReadTimeout(30000);
-            connection.addRequestProperty("User-Agent", USER_AGENT);
+            applyBrowserHeaders(connection);
             connection.connect();
             if (connection.getResponseCode() != 200) {
                 return null;
@@ -149,11 +175,13 @@ public class DatabaseBuilder {
             File tmp = new File(cached + ".tmp");
             if (tmp.exists()) tmp.delete();
             FileOutputStream out = new FileOutputStream(tmp);
+            java.io.InputStream in = openStream(connection);
             byte[] data = new byte[4096];
             int count;
-            while ((count = connection.getInputStream().read(data)) != -1) {
+            while ((count = in.read(data)) != -1) {
                 out.write(data, 0, count);
             }
+            in.close();
             out.close();
             if (tmp.length() > 0) {
                 tmp.renameTo(cached);
